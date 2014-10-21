@@ -32,20 +32,20 @@ module testbench;
     wire [7:0] data_i_o;
     
     //observation
-    wire [1:0]state;
+    //wire [1:0]state;
     //wire [8:0]counter;
-    wire pre_ready;
-    wire beg_pre;
-    wire [1:0]pre_state;
+    //wire pre_ready;
+    //wire beg_pre;
+    //wire pre_state;
     
 
     // -------- input data & output golden pattern --------------
     reg [255:0] dn_mem [0:1];
     reg [255:0] c_mem [0:`TOTAL_DATA-1];
     reg [255:0] m_mem [0:`TOTAL_DATA-1];
-    initial $readmemh("./dat/dn.dat", dn_mem);
-    initial $readmemh("./dat/c.dat", c_mem);
-    initial $readmemh("./dat/m.dat", m_mem);
+    initial $readmemh("../../dat/dn.dat", dn_mem);
+    initial $readmemh("../../dat/c.dat", c_mem);
+    initial $readmemh("../../dat/m.dat", m_mem);
 
     // -------- variables &indices ------------------------------
     integer i, j;
@@ -61,17 +61,16 @@ module testbench;
         .reg_sel(reg_sel),
         .addr(addr),
         .data_i(data_i),
-        .data_o(data_o), 
+        .data_o(data_o),
         
         // observation
-        .state(state),
+        //.state(state),
         //.counter(counter)
-        .pre_ready(pre_ready),
-        .beg_pre(beg_pre),
-        .pre_state(pre_state)
+        //.pre_ready(pre_ready),
+        //.beg_pre(beg_pre),
+       // .pre_state(pre_state)
         
-        
-        /*.clk_o(clk_o), 
+        .clk_o(clk_o), 
         .reset_o(reset_o),
         .ready_o(ready_o),
         .we_o(we_o),
@@ -79,14 +78,14 @@ module testbench;
         .start_o(start_o),
         .reg_sel_o(reg_sel_o),
         .addr_o(addr_o),
-        .data_i_o(data_i_o)*/
+        .data_i_o(data_i_o)
     );
 
 //==== create waveform file =====================================
-    initial begin
+    /*initial begin
         $fsdbDumpfile("exp2_rsa.fsdb");
         $fsdbDumpvars;
-    end
+    end*/
 
 //==== start simulation =========================================
     
