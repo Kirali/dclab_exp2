@@ -200,6 +200,11 @@ module exp2_rsa (
                 2'b11: next_a3[8*addr+:8] = data_i;
             endcase
         end
+        else begin
+            next_a1 = a1;
+            next_a2 = a2;
+            next_a3 = a3;
+        end
             
             // cal_state:begin
                 // for ( i=0; i < 32; i=i+1 )begin
@@ -238,7 +243,6 @@ module exp2_rsa (
                           .N(a3),
                            .clk(clk),.beg(beg_pre),.out(cal_pret),.out_ready(pre_ready),
                            .reset(reset)
-                           
                            //observation
                            ,.state(pre_state)
                            // ,.counting(pre_counting)
@@ -277,8 +281,8 @@ module exp2_rsa (
     always@(*) begin
         if (counter == 9'd256) begin
             next_cal_result0= cal_s;
-             next_done = 1;
-             next_counter = 0;
+            next_done = 1;
+            next_counter = 0;
         end
         else begin
             next_cal_result0 = cal_result0;
