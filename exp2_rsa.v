@@ -283,6 +283,7 @@ module exp2_rsa (
             next_cal_result0= cal_s;
             next_done = 1;
             next_counter = 0;
+            
         end
         else begin
             next_cal_result0 = cal_result0;
