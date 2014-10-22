@@ -5,6 +5,7 @@ module pre_processing (
     beg,
     out,
     out_ready,
+    reset,
     
     //observation
     state
@@ -21,13 +22,15 @@ module pre_processing (
 // ================= parameter definition ===================
     parameter recursive = 1'b0;
     parameter done = 1'b1;
+    
 // ================= in/out declaration =====================
     // ---------------- input ----------------------------------
     input [255:0] M;
     input [255:0] N;
     input clk;
     input beg;
-        
+    input reset;
+    
     // ---------------- output --------------------------------- 
     output [255:0] out;
     output out_ready;
@@ -68,8 +71,14 @@ module pre_processing (
             end
             
             done: begin
-                next_state = done;
-                out_ready = 0;
+                if (beg == 0) begin
+                    next_state = recursive;
+                    out_ready = 0;
+                end
+                else begin
+                    next_state = done;
+                    out_ready = 0;
+                end
             end
             
             default: begin
@@ -82,7 +91,13 @@ module pre_processing (
     // (2) the first time mod N
     // (3) recursive 2M mod N
     always@(*) begin
-        if (recur == 1 && firstMod == 1) begin  // first time mod N
+        if (beg == 0) begin
+            next_MM = M;
+            next_firstMod = 1;
+            next_recur = 1;
+            next_recurtime = 0;
+        end
+        else if (recur == 1 && firstMod == 1) begin  // first time mod N
             if (MM >= N) begin // mod ing
                 next_MM = MM - N;
                 next_firstMod = 1;
@@ -132,13 +147,13 @@ module pre_processing (
     assign out = MM[255:0];
     
 // ================= sequentail part ========================
-always@( posedge clk or negedge beg ) begin
+always@( posedge clk or posedge reset ) begin
 
     // reset
-    if ( beg == 0 ) begin
-        state <= recursive;
+    if ( reset == 1 ) begin
+        state <= done;
         firstMod <= 1'b1;
-        MM <= M;
+        MM <= 0;
         recur <= 1;
         recurtime <= 0;
     end

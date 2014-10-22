@@ -1,6 +1,6 @@
 module montgomery_algorithm(
     A, B, N, clk, beg,
-    out, out_ready
+    out, out_ready, reset
 );
 //==============parameter definition==================
     parameter O_READY   = 0;
@@ -11,31 +11,31 @@ module montgomery_algorithm(
     input[255:0]  N;
     input         clk;
     input         beg;
-    output        out;
+    input         reset;
+    output [255:0]        out;
     output        out_ready;
     integer       i;
 //==============reg/wire declaration==================
-    reg[255:0]    out;
     reg[257:0]    tmp_out;
     reg[257:0]    next_tmp_out;
     reg           out_ready;
     reg[255:0]    AA;
     reg[255:0]    BB;
     reg[255:0]    NN;
-    wire[255:0]   next_AA;
-    wire[255:0]   next_BB;
-    wire[255:0]   next_NN;
+    reg[255:0]   next_AA;
+    reg[255:0]   next_BB;
+    reg[255:0]   next_NN;
     reg[257:0]    q_i256;
     wire          q_i;
     reg[8:0]      iter_n;
-    wire[8:0]     next_iter_n;
+    reg[8:0]     next_iter_n;
     wire [255:0]  first_qi;
 //===============combinational part===================
     
-    assign next_iter_n = (iter_n == 9'd258) ?  iter_n : iter_n + 1;
-    assign next_AA = AA;
-    assign next_BB = BB;
-    assign next_NN = NN;
+    // assign next_iter_n = (iter_n == 9'd258) ?  iter_n : iter_n + 1;
+    // assign next_AA = AA;
+    // assign next_BB = BB;
+    // assign next_NN = NN;
     assign first_qi = {256{AA[0]}}&BB;
     always@(*)begin
         if(AA[iter_n] == 1) q_i256 = tmp_out + BB;
@@ -57,24 +57,27 @@ module montgomery_algorithm(
                     next_out = out;
             end
         end*/
-        if(iter_n == 0) begin
-            if(AA[0] == 0) begin
-                if(first_qi[0] == 0) begin
-                    next_tmp_out = 0;
-                end
-                else begin
-                    next_tmp_out = NN >> 1;
-                end
-            end
-            else begin
-                if(first_qi[0] == 0) begin
-                    next_tmp_out = BB >> 1;
-                end
-                else begin
-                    next_tmp_out = (BB + NN) >> 1;
-                end
-            end
+        if (beg == 0) begin
+            next_tmp_out   = 0;
         end
+        else if(iter_n == 0) begin
+                if(AA[0] == 0) begin
+                    if(first_qi[0] == 0) begin
+                        next_tmp_out = 0;
+                    end
+                    else begin
+                        next_tmp_out = NN >> 1;
+                    end
+                end
+                else begin
+                    if(first_qi[0] == 0) begin
+                        next_tmp_out = BB >> 1;
+                    end
+                    else begin
+                        next_tmp_out = (BB + NN) >> 1;
+                    end
+                end
+            end
         else begin
             if(iter_n < 9'd256) begin
                 case ({AA[iter_n],q_i})
@@ -108,31 +111,51 @@ module montgomery_algorithm(
                     next_tmp_out = tmp_out;
             end
         end
+        
     end
+    
+    always@(*) begin
+        if (beg == 0) begin
+            next_iter_n    = 0;
+            next_AA = A;
+            next_BB = B;
+            next_NN = N;
+            out_ready = O_PROCESS;
+        end
+        else begin
+            next_iter_n    = (iter_n == 9'd258) ?  iter_n : iter_n + 1;
+            next_AA = AA;
+            next_BB = BB;
+            next_NN = NN;
+            if(iter_n == 9'd258)
+                 out_ready = O_READY;
+            else                                 
+                 out_ready = O_PROCESS;
+        end
+    end
+    
+    assign out = tmp_out[255:0];
 //================sequential part=====================
-    always@( posedge clk or negedge beg ) begin
-        if(beg == 0) begin
-            out       <= 0;
+    always@( posedge clk or posedge reset ) begin
+        if(reset == 1) begin
             tmp_out   <= 0;
             iter_n    <= 0;
-            out_ready <= O_PROCESS;
-            AA <= A;
-            BB <= B;
-            NN <= N;
+            // out_ready <= O_PROCESS;
+            AA <= 0;
+            BB <= 0;
+            NN <= 0;
             
         end
         else begin
             iter_n  <= next_iter_n;
             tmp_out <= next_tmp_out;
-            for(i = 0; i < 256; i = i+1)
-                out[i] <= next_tmp_out[i];
             AA <= next_AA;
             BB <= next_BB;
             NN <= next_NN;
-            if(next_iter_n == 9'd258)
-                out_ready <= O_READY;
-            else
-                out_ready <= O_PROCESS;
+            // if(next_iter_n == 9'd258)
+                // out_ready <= O_READY;
+            // else
+                // out_ready <= O_PROCESS;
         end
     end
 endmodule
