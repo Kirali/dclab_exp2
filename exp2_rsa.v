@@ -34,6 +34,7 @@ module exp2_rsa (
     parameter   we_state = 2'b00;
     parameter   cal_state= 2'b01;
     parameter   oe_state = 2'b10;
+    parameter   wait_state = 2'b11;
     
 //==== in/out declaration ==================================
     //-------- input ---------------------------
@@ -108,8 +109,8 @@ module exp2_rsa (
     reg    [8:0] next_counter;
     reg    beg_pre;
     
-    reg   [255:0] cal_result0      ;
-    reg   [255:0] next_cal_result0 ;
+    //reg   [255:0] cal_result0      ;
+    //reg   [255:0] next_cal_result0 ;
     
     reg    [255:0] next_a0 ;
     reg    [255:0] next_a1 ;
@@ -126,7 +127,7 @@ module exp2_rsa (
     reg     [255:0] a3  ;
     
     
-
+    reg     next_ready; 
     reg     next_done;
     reg     done;
     
@@ -145,51 +146,70 @@ module exp2_rsa (
         case(state)
             we_state:begin
                 if(we == 0 && start == 1)begin
-                    ready = 0;
+                    next_ready = 0;
                     next_state = cal_state;
                     beg_pre = 0;
                 end
                 else begin
-                    ready = 1;
+                    next_ready = 1;
                     next_state = we_state;
                     beg_pre = 1;
                 end
             end        
             cal_state:begin
                 if(done == 0)begin
-                    ready = 0;
+                    next_ready = 0;
                     next_state = cal_state;
                     beg_pre = 1;
                 end
                 else begin
-                    ready = 1;
+                    next_ready = 1;
+                    next_state = wait_state;
+                    beg_pre = 1;
+                end
+            end
+            wait_state: begin
+                if (oe == 0) begin
+                    next_ready = 1;
+                    next_state = wait_state;
+                    beg_pre = 1;
+                end
+                else begin
+                    next_ready = 1;
                     next_state = oe_state;
                     beg_pre = 1;
                 end
             end
             oe_state:begin
                 if(oe == 0)begin
-                    ready = 1;
+                    next_ready = 1;
                     next_state = we_state;
                     beg_pre = 1;
                 end
                 else begin
-                    ready = 1;
+                    next_ready = 1;
                     next_state = oe_state;
                     beg_pre = 1;
                 end
             end
             default: begin
-                ready = 1'b0;
+                next_ready = 1'b0;
                 next_state = 2'b0;
                 beg_pre = 1;
             end
         endcase
     end
     
+    // ready
+    // always@(*)begin
+        // if(state == cal_state && done == 0)  next_ready = 1'b0;
+        // else next_ready = 1'b1;
+    // end
+    
     //256bit reg 
     always@(*) begin
-        if (state == we_state) begin
+        if (state == we_state && we == 1) begin//state == we_state) begin
+            //next_a0 = a0; // add
             next_a1 = a1;
             next_a2 = a2;
             next_a3 = a3;
@@ -201,6 +221,7 @@ module exp2_rsa (
             endcase
         end
         else begin
+            //next_a0 = a0; // add
             next_a1 = a1;
             next_a2 = a2;
             next_a3 = a3;
@@ -231,10 +252,14 @@ module exp2_rsa (
         // end
     end
     
-    //data_o
+    //data_o.
     always@(*) begin
-        if (oe == 1&& ready == 1)
-        next_data_o = a0[8*addr+:8];          
+        if (ready == 1) begin//&&state==oe_state)
+            if (oe==1)
+                next_data_o = a0[8*addr+:8];          
+            else 
+                next_data_o = data_o;
+        end
         else next_data_o = 8'b0;
     end
     
@@ -258,20 +283,18 @@ module exp2_rsa (
                            ,.reset(reset)
                            ); // for T
                                   
-    assign  next_MA_beg = ( ((MA_sready && MA_tready) == 0 || pre_ready == 1) && (pre_state == 1|| pre_ready == 1))? 0 : 1;    
-    
-    
-    assign  next_MA_sA = pre_ready == 1? cal_pret : cal_t ; 
+    assign  next_MA_beg = ( ((MA_sready && MA_tready) == 1'b0 || pre_ready == 1'b1) && (pre_state == 1'b1|| pre_ready == 1'b1))? 1'b0 : 1'b1;    
+    assign  next_MA_sA = (pre_ready == 1'b1)? cal_pret : cal_t ; 
     //assign  next_MA_sB = pre_ready == 1? 1 : cal_s ;
     always@(*)begin
-        if (pre_ready == 1)
-            next_MA_sB = 1;
+        if (pre_ready == 1'b1)
+            next_MA_sB = 1'b1;
         else if(a2[counter])
             next_MA_sB = cal_s;
         else next_MA_sB = MA_sB;
     end
-    assign  next_MA_tA = pre_ready == 1? cal_pret : cal_t ;
-    assign  next_MA_tB = pre_ready == 1? cal_pret : cal_t ;
+    assign  next_MA_tA = (pre_ready == 1'b1)? cal_pret : cal_t ;
+    assign  next_MA_tB = (pre_ready == 1'b1)? cal_pret : cal_t ;
     
     
     
@@ -279,16 +302,23 @@ module exp2_rsa (
     
      
     always@(*) begin
-        if (counter == 9'd256) begin
-            next_cal_result0= cal_s;
-            next_done = 1;
-            next_counter = 0;
-            
+        if (state != cal_state) begin // change
+            next_a0 = a0;
+            next_done = 0;
+            next_counter = 9'd0;
         end
         else begin
-            next_cal_result0 = cal_result0;
-            next_done = 0;
-            next_counter = (MA_sready == 0 && MA_tready == 0 && MA_beg == 1 && pre_state == 1)? counter + 1: counter;
+            if (counter == 9'd256) begin
+                next_a0 = cal_s;
+                next_done = 1;
+                next_counter = 9'd0;
+                
+            end
+            else begin
+                next_a0 = a0;
+                next_done = 0;
+                next_counter = (MA_sready == 0 && MA_tready == 0 && MA_beg == 1 && pre_state == 1)? counter + 9'b1: counter;
+            end
         end
     end
     
@@ -299,26 +329,27 @@ module exp2_rsa (
             a1 <= 255'b0;
             a2 <= 255'b0;
             a3 <= 255'b0;
-            cal_result0 <= 255'b0; 
+            //cal_result0 <= 255'b0; 
             cal_t <= 255'b0;
             cal_s <= 255'b0;
             MA_beg<= 1;
             counter <= 0;
-            state <= 0;
+            state <= we_state;
             MA_sA <= 255'b0;
             MA_sB <= 255'b0;
             MA_tA <= 255'b0;
             MA_tB <= 255'b0;
             done <= 0;
             data_o <= 8'b0;
+            ready <= 1'b1;
             //cal_pret <= 255'bx;
         end
         else begin
-            a0 <= next_cal_result0;
+            a0 <= next_a0;
             a1 <= next_a1;
             a2 <= next_a2;
             a3 <= next_a3;
-            cal_result0 <=next_cal_result0;
+            //cal_result0 <=next_cal_result0;
             cal_t <= next_cal_t;
             cal_s <= next_cal_s;
             MA_beg<= next_MA_beg;
@@ -330,6 +361,7 @@ module exp2_rsa (
             MA_tB <= next_MA_tB;
             done  <= next_done;
             data_o <= next_data_o;
+            ready <= next_ready;
             //cal_pret <= next_cal_pret;
         end
     

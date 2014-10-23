@@ -3,8 +3,8 @@ module montgomery_algorithm(
     out, out_ready, reset
 );
 //==============parameter definition==================
-    parameter O_READY   = 0;
-    parameter O_PROCESS = 1;
+    parameter O_READY   = 1'b0;
+    parameter O_PROCESS = 1'b1;
 //===============in/out declaration===================
     input[255:0]  A;
     input[255:0]  B;
@@ -123,7 +123,7 @@ module montgomery_algorithm(
             out_ready = O_PROCESS;
         end
         else begin
-            next_iter_n    = (iter_n == 9'd258) ?  iter_n : iter_n + 1;
+            next_iter_n    = (iter_n == 9'd258) ?  iter_n : iter_n + 9'b1;
             next_AA = AA;
             next_BB = BB;
             next_NN = NN;

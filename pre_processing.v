@@ -119,13 +119,13 @@ module pre_processing (
                         next_MM = MM + MM - N;
                         next_firstMod = 0;
                         next_recur = 1;
-                        next_recurtime = recurtime + 1;
+                        next_recurtime = recurtime + 9'b1;
                     end
                     else begin // case 2
                         next_MM = MM + MM;
                         next_firstMod = 0;
                         next_recur = 1;
-                        next_recurtime = recurtime + 1;
+                        next_recurtime = recurtime + 9'b1;
                     end
                 end
                 else begin // finish recursive

@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
-`define CYCLE      1000.0
+`define CYCLE      50.0
 `define End_CYCLE  1000000000       // Modify cycle times once your design need more cycle times!
 `define TOTAL_DATA 38
-`define TEST_DATA  2
+`define TEST_DATA  6
 
 
 module testbench;
