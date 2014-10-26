@@ -49,8 +49,8 @@ module pre_processing (
     reg  next_recur;
     reg  firstMod;
     reg  next_firstMod;
-    reg  [256:0] MM;
-    reg  [256:0] next_MM; 
+    reg  [257:0] MM;
+    reg  [257:0] next_MM; 
     reg  out_ready;
     reg  [8:0] recurtime;
     reg  [8:0] next_recurtime;
@@ -129,10 +129,18 @@ module pre_processing (
                     end
                 end
                 else begin // finish recursive
-                    next_MM = MM;
-                    next_firstMod = 0;
-                    next_recur = 0;
-                    next_recurtime = recurtime;
+                    if (MM >= N) begin
+                        next_MM = MM - N;
+                        next_firstMod = 0;
+                        next_recur = 0;
+                        next_recurtime = recurtime;
+                    end
+                    else begin
+                        next_MM = MM;
+                        next_firstMod = 0;
+                        next_recur = 0;
+                        next_recurtime = recurtime;
+                    end
                 end
         end
         else begin // all finished
