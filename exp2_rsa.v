@@ -90,6 +90,8 @@ module exp2_rsa (
     wire   next_MA_beg;
     wire   [255:0] next_MA_sA     ;
     reg    [255:0] next_MA_sB     ;
+    reg    [255:0] next_save;
+    reg    [255:0] save;
     wire   [255:0] next_MA_tA     ;
     wire   [255:0] next_MA_tB     ;
     reg   [255:0]  MA_sA     ;
@@ -283,15 +285,22 @@ module exp2_rsa (
                            ,.reset(reset)
                            ); // for T
                                   
-    assign  next_MA_beg = ( ((MA_sready && MA_tready) == 1'b0 || pre_ready == 1'b1) && (pre_state == 1'b1|| pre_ready == 1'b1))? 1'b0 : 1'b1;    
+    assign  next_MA_beg = ( ((MA_sready && MA_tready) == 1'b0 || pre_ready == 1'b1) && (pre_state == 1'b1|| pre_ready == 1'b1)&&(counter < 256))? 1'b0 : 1'b1;    
     assign  next_MA_sA = (pre_ready == 1'b1)? cal_pret : cal_t ; 
     //assign  next_MA_sB = pre_ready == 1? 1 : cal_s ;
     always@(*)begin
-        if (pre_ready == 1'b1)
+        if (pre_ready == 1'b1) begin
             next_MA_sB = 1'b1;
-        else if(a2[counter])
+            next_save = 1'b1;
+        end    
+        else if(a2[counter] == 1 && counter < 256) begin
             next_MA_sB = cal_s;
-        else next_MA_sB = MA_sB;
+            next_save = cal_s;
+        end        
+        else begin
+            next_MA_sB = MA_sB;
+            next_save = save;
+        end    
     end
     assign  next_MA_tA = (pre_ready == 1'b1)? cal_pret : cal_t ;
     assign  next_MA_tB = (pre_ready == 1'b1)? cal_pret : cal_t ;
@@ -309,7 +318,7 @@ module exp2_rsa (
         end
         else begin
             if (counter == 9'd256) begin
-                next_a0 = cal_s;
+                next_a0 = save;
                 next_done = 1;
                 next_counter = 9'd0;
                 
@@ -325,23 +334,24 @@ module exp2_rsa (
 //==== sequential part =====================================  
     always@(posedge clk or posedge reset)
         if (reset == 1) begin
-            a0 <= 255'b0;
-            a1 <= 255'b0;
-            a2 <= 255'b0;
-            a3 <= 255'b0;
+            a0 <= 256'b0;
+            a1 <= 256'b0;
+            a2 <= 256'b0;
+            a3 <= 256'b0;
             //cal_result0 <= 255'b0; 
-            cal_t <= 255'b0;
-            cal_s <= 255'b0;
+            cal_t <= 256'b0;
+            cal_s <= 256'b0;
             MA_beg<= 1;
             counter <= 0;
             state <= we_state;
-            MA_sA <= 255'b0;
-            MA_sB <= 255'b0;
-            MA_tA <= 255'b0;
-            MA_tB <= 255'b0;
+            MA_sA <= 256'b0;
+            MA_sB <= 256'b0;
+            MA_tA <= 256'b0;
+            MA_tB <= 256'b0;
             done <= 0;
             data_o <= 8'b0;
             ready <= 1'b1;
+            save <= 0;
             //cal_pret <= 255'bx;
         end
         else begin
@@ -362,6 +372,7 @@ module exp2_rsa (
             done  <= next_done;
             data_o <= next_data_o;
             ready <= next_ready;
+            save <= next_save;
             //cal_pret <= next_cal_pret;
         end
     
